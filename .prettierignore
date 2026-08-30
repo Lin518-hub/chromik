@@ -1,0 +1,8 @@
+node_modules
+dist
+dist-main
+release
+coverage
+artifacts
+src
+*.md

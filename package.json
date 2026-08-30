@@ -1,0 +1,140 @@
+{
+  "name": "chromik",
+  "version": "0.9.3",
+  "private": true,
+  "author": "Lin518-hub",
+  "description": "Chromik 珂影 local non-destructive film processing desktop app",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/Lin518-hub/chromik#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lin518-hub/chromik.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Lin518-hub/chromik/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "dist-main/main/main.js",
+  "scripts": {
+    "dev": "concurrently -k --success first \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+    "build": "npm run typecheck && tsc -p tsconfig.main.json && vite build",
+    "typecheck": "tsc -p tsconfig.renderer.json --noEmit && tsc -p tsconfig.main.json --noEmit",
+    "test": "vitest run",
+    "test:color": "vitest run src/core/reconstruct.test.ts src/core/develop-proxy.test.ts src/core/histogram.test.ts src/core/quantize.test.ts src/core/pipeline-parity.test.ts src/core/visual-regression.test.ts src/workers/export-source-scaling.test.ts",
+    "test:coverage": "vitest run --exclude src/core/performance-bench.test.ts --coverage --coverage.include='src/core/{color,density,develop-proxy,histogram,image,quantize,raw-display,reconstruct}.ts' --coverage.thresholds.lines=75 --coverage.thresholds.statements=75 --coverage.thresholds.functions=80 --coverage.thresholds.branches=70",
+    "lint": "eslint scripts",
+    "format:check": "prettier --check package.json eslint.config.mjs",
+    "licenses": "node scripts/generate-third-party-notices.mjs",
+    "qa:hash-corpus": "node scripts/hash-sample-corpus.mjs",
+    "qa:contact-worker": "node scripts/test-contact-sheet-worker.mjs",
+    "qa:export-color": "node scripts/validate-export-color.mjs",
+    "qa:fault-inject": "bash scripts/qa-fault-inject.sh",
+    "qa:library-stress": "bash scripts/qa-library-stress.sh",
+    "qa:resilience": "vitest run src/main/atomic-write.test.ts src/main/storage-crash-recovery.test.ts src/main/storage.test.ts src/main/backup-service.test.ts && npm run qa:library-stress && npm run qa:fault-inject",
+    "verify": "npm run typecheck && npm run lint && npm run format:check && npm test && npm run build",
+    "start": "electron .",
+    "dist:mac": "npm run build && electron-builder --mac dmg zip --arm64",
+    "dist:win": "npm run build && electron-builder --win nsis portable --x64"
+  },
+  "dependencies": {
+    "@tesseract.js-data/eng": "^1.0.0",
+    "heic-decode": "^2.1.0",
+    "libraw-wasm": "^1.6.0",
+    "lucide-react": "^0.541.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "sharp": "^0.35.3",
+    "tesseract.js": "^7.0.0",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.3.0",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.2",
+    "@vitest/coverage-v8": "^3.2.7",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.0.0",
+    "electron": "^43.4.1",
+    "electron-builder": "^26.15.3",
+    "eslint": "^10.9.0",
+    "globals": "^17.11.0",
+    "prettier": "^3.9.6",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^3.2.4",
+    "wait-on": "^8.0.4"
+  },
+  "build": {
+    "appId": "cn.chromik.desktop",
+    "productName": "Chromik 珂影",
+    "directories": {
+      "output": "release"
+    },
+    "asar": true,
+    "files": [
+      "dist/**/*",
+      "dist-main/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/@img/sharp-wasm32",
+        "to": "app.asar.unpacked/node_modules/@img/sharp-wasm32",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "node_modules/@emnapi/runtime",
+        "to": "app.asar.unpacked/node_modules/@emnapi/runtime",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/sharp/**/*",
+      "node_modules/@img/**/*",
+      "node_modules/tesseract.js/**/*",
+      "node_modules/tesseract.js-core/**/*",
+      "node_modules/@tesseract.js-data/**/*",
+      "node_modules/heic-decode/**/*",
+      "node_modules/libheif-js/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "Chromik-${version}-${arch}.${ext}",
+      "signAndEditExecutable": false,
+      "publisherName": "Chromik"
+    },
+    "mac": {
+      "category": "public.app-category.photography",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "artifactName": "Chromik-Preview-${version}-${arch}.${ext}",
+      "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "identity": "${env.CHROMIK_MAC_IDENTITY:-null}",
+      "notarize": {
+        "teamId": "${env.CHROMIK_APPLE_TEAM_ID}"
+      }
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  }
+}
